@@ -92,13 +92,13 @@ class PinballRace(Game):
 
             elif (gate == 0 and self.lap <= TOTAL_LAPS):
                 new_time = current_milli_time()
-                lap_time = round((new_time - self.last_time) / 1000, 3)
+                lap_time = new_time - self.last_time
                 self.last_time = new_time
 
                 if self.lap == 0:
                     self.arduino.gate_up()
                 else:
-                    self.total_time = round(self.total_time + lap_time, 3)
+                    self.total_time = self.total_time + lap_time
                     self.lap_times.append(lap_time)
                     self.io.send_score(score=lap_time)
                     self.io.send_lap()
