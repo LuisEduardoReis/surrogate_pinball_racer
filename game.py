@@ -123,7 +123,12 @@ class PinballRace(Game):
         self.arduino.gate_up()
 
     async def on_finish(self):
+        logging.info("'on_finish' started")
+        if self.lap < TOTAL_LAPS:
+            self.io.send_score(score=300, final_score=True)
+
         self.io.disable_inputs()
+        logging.info("'on_finish' ended")
         
     async def on_exit(self, reason, exception):
         self.arduino.stop()
