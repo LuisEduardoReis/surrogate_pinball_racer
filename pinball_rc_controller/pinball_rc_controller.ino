@@ -1,11 +1,25 @@
 #include <Servo.h>
+#include <LiquidCrystal.h>
 
 #define time_t unsigned long
 
-#define GATE_SERVO_PIN 5
+/*#define GATE_SERVO_PIN 5
 #define X_SERVO_PIN 4
 #define Y_SERVO_PIN 3
+#define START_SENSOR A0*/
+
+#define GATE_SERVO_PIN 10
+#define X_SERVO_PIN 9
+#define Y_SERVO_PIN 8
 #define START_SENSOR A0
+
+
+#define LCD_RS 12
+#define LCD_E 11
+#define LCD_D4 5
+#define LCD_D5 4
+#define LCD_D6 3
+#define LCD_D7 2
 
 #define UPDATE_DELAY 20
 #define TILT_MIN_VALUE 35
@@ -23,8 +37,13 @@ Servo gateServo; int gatePos = 90; int gateTargetPos = 90;
 Servo xServo; int xPos = 90; int xTargetPos = 90;
 Servo yServo; int yPos = 90; int yTargetPos = 90;
 
+LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
+long lcd_timer = -1; long lcd_time_offset;
+
 void setup() {
   Serial.begin(57600);
+  
+  lcd.begin(16,2);
   
   gateServo.attach(GATE_SERVO_PIN);
   xServo.attach(X_SERVO_PIN);
@@ -37,6 +56,7 @@ void loop() {
   processCommands();
   sendEvents();
   updateTiltServos();
+  updateDisplay();
   delay(UPDATE_DELAY);
 }
 
@@ -67,6 +87,20 @@ void processCommands() {
           gateServo.write(GATE_DOWN);
         }
         break;
+      case 'd':
+        value = command[1] - '0';
+        state = command.substring(2);
+        lcd.setCursor(0,value);
+        lcd.print(state);
+        if (value == 1) {
+          lcd_timer = -1;
+        }
+        break;
+      case 'c':
+        lcd_timer = millis();
+        lcd_time_offset = command.substring(1).toInt();
+        break;       
+        
       default:
         break;
     }
@@ -105,6 +139,19 @@ void updateTiltServos() {
   if (yPos != yTargetPos) {
     yPos = stepTo(yPos, yTargetPos, TILT_SPEED);
     yServo.write(yPos);
+  }
+}
+
+char lineBuffer[16];
+void updateDisplay() {
+  if (lcd_timer >= 0) {
+    long time = millis() - lcd_timer + lcd_time_offset;
+    int millisec = time % 1000;
+    int seconds = (time / 1000) % 60;
+    int minutes = time / 60000;
+    sprintf(lineBuffer, "    %02d:%02d:%03d   ",minutes,seconds,millisec);
+    lcd.setCursor(0,1);
+    lcd.print(lineBuffer);
   }
 }
 
