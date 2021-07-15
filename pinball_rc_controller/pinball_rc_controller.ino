@@ -3,23 +3,19 @@
 
 #define time_t unsigned long
 
-/*#define GATE_SERVO_PIN 5
+#define GATE_SERVO_PIN 5
 #define X_SERVO_PIN 4
 #define Y_SERVO_PIN 3
-#define START_SENSOR A0*/
-
-#define GATE_SERVO_PIN 10
-#define X_SERVO_PIN 9
-#define Y_SERVO_PIN 8
 #define START_SENSOR A0
+#define CHECK1_SENSOR A1
+#define CHECK2_SENSOR A2
 
-
-#define LCD_RS 12
-#define LCD_E 11
-#define LCD_D4 5
-#define LCD_D5 4
-#define LCD_D6 3
-#define LCD_D7 2
+#define LCD_RS 11
+#define LCD_E 12
+#define LCD_D4 10
+#define LCD_D5 9
+#define LCD_D6 8
+#define LCD_D7 7
 
 #define UPDATE_DELAY 20
 #define TILT_MIN_VALUE 35
@@ -44,6 +40,7 @@ void setup() {
   Serial.begin(57600);
   
   lcd.begin(16,2);
+  lcd.print("It works mf");
   
   gateServo.attach(GATE_SERVO_PIN);
   xServo.attach(X_SERVO_PIN);
@@ -107,27 +104,29 @@ void processCommands() {
   }
 }
 
-float baseValue = 256;
-float downEdgeThreshold = 0.75f;
-float upEdgeThreshold = 0.85f;
-boolean startGateDown = false;
+#define NUM_GATES 2
+const float FALLING_EDGE_THRESHOLD = 0.75f;
+const float RISING_EDGE_THRESHOLD = 0.85f;
+
+float baseValues[NUM_GATES] = {256, 256};
+boolean gateStates[NUM_GATES] = {false, false};
+int gatePins[NUM_GATES] = {START_SENSOR, CHECK1_SENSOR};
+
 
 void sendEvents() {
-  int currentValue = analogRead(START_SENSOR);
-  if (currentValue > baseValue) baseValue = currentValue;
-  else baseValue = baseValue * 0.98f + currentValue * 0.02f;
-
-  if (currentValue < baseValue * downEdgeThreshold && !startGateDown) {
-    time_t now = millis();
-    time_t time = now - lastStartGateTime;
-    lastStartGateTime = now;
-    Serial.print((int)(time / 1000));
-    Serial.print(".");
-    Serial.println((int)(time % 1000));
+  // Gate passing
+  for(int i = 0; i < NUM_GATES; i++) {
+    int currentValue = analogRead(gatePins[i]);
     
-    startGateDown = true;
-  } else if (currentValue > baseValue * upEdgeThreshold && startGateDown) {
-    startGateDown = false;
+    if (currentValue > baseValues[i]) baseValues[i] = currentValue;
+    else baseValues[i] = baseValues[i] * 0.98f + currentValue * 0.02f;
+  
+    if (currentValue < (baseValues[i] * FALLING_EDGE_THRESHOLD) && !gateStates[i]) {
+      Serial.print("g"); Serial.println(i);
+      gateStates[i] = true;
+    } else if (currentValue > (baseValues[i] * RISING_EDGE_THRESHOLD) && gateStates[i]) {
+      gateStates[i] = false;
+    }
   }
 }
 
